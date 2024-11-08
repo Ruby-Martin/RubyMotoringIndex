@@ -33,9 +33,9 @@ severity <- read_csv("severity.csv")
 min.year.of.study <- as.numeric(min(severity$accident_year))
 max.year.of.study <- as.numeric(max(severity$accident_year))
 severity$acc_cas <- paste0(severity$accident_index, "_", severity$vehicle_reference, "_", severity$casualty_reference)
-severity$accident_year <- NULL
 severity$injury_based <- NULL
 severity$accident_reference <- NULL
+severity$accident_year <- NULL
 
 df <- stats19::get_stats19(year = 1979, type = "cas", format = TRUE)
 
