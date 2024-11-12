@@ -99,17 +99,22 @@ FuelColours <<- c("Diesel" = .DieselGrey,
                   "Ethanol" = .RACFColour4, 
                   "Biodiesel" = .RACFColour11.1)
 VehicleColours <<- c("Cars" = .RACFBlue, 
-                     "TFL Tube" = .RACFColour2 , 
+                     "TFL tube" = .RACFColour2 , 
                      "Cycling" = .RACFColour3.2 , 
-                     "TFL Bus"= .RACFColour8, 
-                     "Heavy Goods Vehicles" = .RACFColour6.1, 
-                     "All Motor Vehicles" = .RACFColour5, 
-                     "Light Commercial Vehicles" = .RACFColour5.3, 
-                     "National Rail" = .RACFColour8.3, 
-                     "National Rail noCR" = .RACFColour10.1, 
-                     "Bus excluding London" = .RACFColour1.2)
-CasualtyColours <<- c("Fatality (killed)" = .RACFColour9, "Casualty (Serious injury)" = .RACFColour7, "Fatality or casualty (killed or seriously injured)" = .RACFColour5.2)
-CasualtyLines <<- c("Fatality (killed)" = 2, "Casualty (Serious injury)" = 4, "Fatality or casualty (killed or seriously injured)" = 1)
+                     "TFL bus"= .RACFColour8, 
+                     "Heavy goods vehicles" = .RACFColour6.1, 
+                     "All motor vehicles" = .RACFColour5, 
+                     "Light commercial vehicles" = .RACFColour5.3, 
+                     "National rail" = .RACFColour8.3, 
+                     "National rail noCR" = .RACFColour10.1, 
+                     "Bus excluding london" = .RACFColour1.2, 
+                     "Cars and taxis" = .RACFBlue,
+                     "Motorcycles" = .RACFColour7,
+                     "Total other vehicles" = .RACFColour4,
+                     "Buses and coaches" = .RACFColour4.1)
+CasualtyColours <<- c("Fatality (killed)" = .RACFColour9, "Casualty (serious injury)" = .RACFColour7, "Fatality or casualty (killed or seriously injured)" = .RACFColour5.2)
+CasualtyLines <<- c("Fatality (killed)" = 2, "Casualty (serious injury)" = 4, "Fatality or casualty (killed or seriously injured)" = 1)
 PassFailColours <<- c("Passed" = .RACFColour3.1, "Failed"= .RACFColour10)
+RoadClassColours <<- c("Motorways" = .RACFColour9, "Rural A roads"= .GFIgreen,  "Urban A roads"= .RACFColour7, "Rural minor roads"= .RACFColour6, "Urban minor roads"=.RACFColour5.4 ,  "All roads"=.RACFColour5.3 )
 }
 SetColours()

@@ -1,0 +1,56 @@
+---
+title: "Set-up"
+author: "ruby"
+date: "2024-11-11"
+output: pdf_document
+---
+
+#Set up
+```{r}
+library(data.table)
+library(ggplot2)
+library(patchwork)
+library(lubridate)
+```
+
+```{r}
+FullDataClean <- fread("CSV/full_data_clean.csv")
+MilesByVehType <- fread("CSV/MilesByVehType.csv")
+MilesbyRoadClassandRegion <- fread("CSV/MilesbyRoadClassandRegion.csv")
+MilesbyVehandRoadType <- fread("CSV/MilesbyVehandRoadType.csv")
+MilesbyVehtypeandRegion <- fread("CSV/MilesbyVehtypeandRegion.csv")
+MilesbyRoadClass <- fread("CSV/MilesbyRoadClass.csv")
+MilesbyVehtypeandRoadClass <- fread("CSV/MilesbyVehtypeandRoadClass.csv")
+Percentagechange <- fread("CSV/Percentagechange.csv")
+PercentagechangeCars_and_taxis <- fread("CSV/PercentagechangeCars_and_taxis.csv")
+MilesByroadclass1950_onwards <- fread("CSV/MilesByroadclass1950_onwards.csv")
+```
+
+```{r}
+setnames(MilesbyRoadClassandRegion, c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35", "V36", "V37"), c("Road_type", "Road_management", "Rural_urban_classification", "Region", "Former_met_county", "Units", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"))
+
+setnames(MilesbyVehtypeandRegion, c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35"), c("Region", "Former_met_county", "vehicle", "Units", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"))
+
+setnames(MilesbyVehandRoadType, c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V35", "V36"), c("Road_type", "Road_management", "Rural_urban_classification", "Vehicle", "Units", "1993", "1994", "1995", "1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"))
+```
+
+```{r}
+ggplot(data = MilesByVehType, aes(x= Year, y= Cars_and_Taxis, colour = "Cars and taxis")) + geom_line() + 
+  geom_line(data = MilesByVehType, aes(x= Year, y= Light_commercial_veh, colour = "Light commercial vehicles")) + 
+  geom_line(data = MilesByVehType, aes(x= Year, y= Heavy_goods_veh, colour = "Heavy goods vehicles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y= `Other_veh:Motorcycles`, colour = "Motorcycles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  `Other_veh:Buses_and_coaches`, colour = "Buses and coaches"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  Total_other_veh, colour = "Total other vehicles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  All_motor_veh, colour = "All motor vehicles")) + 
+  scale_color_manual("Vehicle types", values = VehicleColours) + theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by vehicle type")
+```
+```{r}
+ggplot(data = MilesbyRoadClass, aes(x= Year, y = `Major_roads:motorways`, colour = "Motorways")) + geom_line() +
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Rural_A_roads`, colour = "Rural A roads")) + 
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Urban_A_roads`, colour = "Urban A roads")) +
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Rural`, colour = "Rural minor roads")) + 
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Urban`, colour = "Urban minor roads")) + 
+  theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by road type")+ 
+  scale_color_manual("Road class", values = RoadClassColours) + 
+  scale_x_continuous(breaks = pretty(MilesbyRoadClass$Year, n = 10), expand=c(0,0))
+```
