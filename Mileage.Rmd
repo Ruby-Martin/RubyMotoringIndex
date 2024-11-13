@@ -1,0 +1,40 @@
+---
+title: "Set-up"
+author: "ruby"
+date: "2024-11-11"
+output: pdf_document
+---
+
+#Set up
+```{r}
+library(data.table)
+library(ggplot2)
+library(patchwork)
+library(lubridate)
+```
+
+```{r}
+TotalMilesDriven <- fread("CSV/MilesbyVehicleType.csv")
+MilesbyRoadClass <- fread("CSV/MilesbyRoadClass.csv")
+```
+
+```{r}
+ggplot(data = MilesByVehType, aes(x= Year, y= Cars_and_Taxis, colour = "Cars and taxis")) + geom_line() + 
+  geom_line(data = MilesByVehType, aes(x= Year, y= Light_commercial_veh, colour = "Light commercial vehicles")) + 
+  geom_line(data = MilesByVehType, aes(x= Year, y= Heavy_goods_veh, colour = "Heavy goods vehicles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y= `Other_veh:Motorcycles`, colour = "Motorcycles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  `Other_veh:Buses_and_coaches`, colour = "Buses and coaches"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  Total_other_veh, colour = "Total other vehicles"))+ 
+  geom_line(data = MilesByVehType, aes(x= Year, y=  All_motor_veh, colour = "All motor vehicles")) + 
+  scale_color_manual("Vehicle types", values = VehicleColours) + theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by vehicle type")
+```
+```{r}
+ggplot(data = MilesbyRoadClass, aes(x= Year, y = `Major_roads:motorways`, colour = "Motorways")) + geom_line() +
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Rural_A_roads`, colour = "Rural A roads")) + 
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Urban_A_roads`, colour = "Urban A roads")) +
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Rural`, colour = "Rural minor roads")) + 
+  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Urban`, colour = "Urban minor roads")) + 
+  theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by road type")+ 
+  scale_color_manual("Road class", values = RoadClassColours) + 
+  scale_x_continuous(breaks = pretty(MilesbyRoadClass$Year, n = 10), expand=c(0,0))
+```
