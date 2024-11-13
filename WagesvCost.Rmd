@@ -29,10 +29,9 @@ ggplot() + geom_line(EarningsandHours, mapping = aes(x= Date, y=`Weekly earnings
 AnnualPay[, c("10 percentile", "20 percentile", "25 percentile", "30 percentile", "40 percentile", "50 percentile", "60 percentile", "70 percentile", "80 percentile", "90 percentile"):=NULL]
 WeeklyPay[, c("10 percentile", "20 percentile", "25 percentile", "30 percentile", "40 percentile", "50 percentile", "60 percentile", "70 percentile", "80 percentile", "90 percentile"):=NULL]
 HourlyPay[, c("10 percentile", "20 percentile", "25 percentile", "30 percentile", "40 percentile", "50 percentile", "60 percentile", "70 percentile", "80 percentile", "90 percentile"):=NULL]
-ppermile[, c("dayofquery", "Car", "MY", "Category", "UniqueID", "DirectDebitComparison", "DirectDebitComparisonNight"):=NULL]
-ppermile <- ppermile[, yearmonth := lubridate::round_date(date, "months")]
-EarningsandHours <- EarningsandHours[95:390]
-EarningsandHours[, c("percent changes: single month", "percent changes: 3 month average", "EndDate") :=NULL]
+
+ppermile <- ppermile[, c("dayofquery", "Car", "MY", "Category", "UniqueID", "DirectDebitComparison", "DirectDebitComparisonNight"):=NULL][, yearmonth := lubridate::round_date(date, "months")]
+EarningsandHours <- EarningsandHours[95:390][, c("percent changes: single month", "percent changes: 3 month average", "EndDate") :=NULL]
 ```
 
 ```{r}
@@ -49,10 +48,7 @@ ggplot(WeeklyPay, aes(x= Date, y= Mean, colour = Description)) + geom_line() + t
 
 ```{r}
 CostofDriving <- merge(ppermile, EarningsandHours, by.x = "yearmonth", by.y="Date", all = TRUE)
-CostofDriving <- CostofDriving[yearmonth >= "2020-12-30"]
-
-CostofDriving <- CostofDriving[, WagesinPence := `Weekly earnings` * 100]
-CostofDriving <- CostofDriving[, costwage := (WagesinPence / ppm)/ `Average weekly hours of work:All workers` ]
+CostofDriving <- CostofDriving[yearmonth >= "2020-12-30"][, WagesinPence := `Weekly earnings` * 100][, costwage := (WagesinPence / ppm)/ `Average weekly hours of work:All workers` ]
 ```
 
 ppm : how much you spend for one mile

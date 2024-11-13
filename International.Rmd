@@ -4,6 +4,7 @@ author: "ruby"
 date: "2024-10-10"
 output: pdf_document
 ---
+#Set-up
 ```{r}
 library(data.table)
 library(ggplot2)
@@ -13,16 +14,13 @@ library(lubridate)
 
 ```{r}
 OECDStats <- fread("CSV/OECDInternationalFatalities.csv")
-```
-
-```{r}
-OECDStats <- OECDStats[order(OBS_VALUE, decreasing = TRUE),]
-OECDStats <- OECDStats[, Reference := paste0(REF_AREA, "_", `Reference area`)]
+OECDStats <- OECDStats[order(OBS_VALUE, decreasing = TRUE),][, Reference := paste0(REF_AREA, "_", `Reference area`)]
 ```
 
 ```{r}
 unique(OECDStats$Reference)
 ```
+#Graphs
 ```{r}
 ggplot(data= OECDStats, aes(x = TIME_PERIOD , y= OBS_VALUE, colour = REF_AREA)) + geom_line() + theme_classic() + ylab("Fatalities") + xlab("Date")
 ```
