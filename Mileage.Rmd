@@ -14,7 +14,7 @@ library(lubridate)
 ```
 
 ```{r}
-TotalMilesDriven <- fread("CSV/MilesbyVehicleType.csv")
+MilesByVehType <- fread("CSV/MilesbyVehicleType.csv")
 MilesbyRoadClass <- fread("CSV/MilesbyRoadClass.csv")
 ```
 
