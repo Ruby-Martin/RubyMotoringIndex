@@ -63,4 +63,3 @@ cas.df$casualty_type <- NULL
 cas.df$car_passenger <- NULL
 
 
-fwrite(cas.df, "CSV/casdf.csv")
