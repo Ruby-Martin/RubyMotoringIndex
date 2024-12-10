@@ -163,6 +163,82 @@ ggplot() +
   geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted")
 
 ```
+
+
+```{r}
+ggplot() + 
+  geom_line(data = Ksi3, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
+  geom_line(data = Ksi3, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
+  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
+  theme_classic() + 
+  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled") + 
+  ylab("Casualties/ fatalities per billion miles") + 
+  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
+  xlab("End of year") + 
+  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
+  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
+  geom_vline(xintercept=2004, color="black", linewidth=0.2, linetype = "dashed") +
+  geom_text(data = annotations, aes(x = xcord, y = ycord, label=label, fontface = "italic")) + 
+  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(NA,1995)) + 
+  scale_y_continuous(expand=c(0,0)) +
+  geom_text(data = seatbelts, aes( x = x, y = y, label = label), check_overlap = TRUE, size = 3, size.unit = "mm") +
+  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
+  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted")
+
+
+ggplot() + 
+  geom_line(data = Ksi3, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
+  geom_line(data = Ksi3, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
+  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
+  theme_classic() + 
+  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled") + 
+  ylab("Casualties/ fatalities per billion miles") + 
+  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
+  xlab("End of year") + 
+  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
+  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
+  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(NA,1986)) + 
+  scale_y_continuous(expand=c(0,0)) +
+  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
+```
+
+
+```{r}
+Fatalities <- ggplot() + 
+  geom_line(data = Ksi3, aes(y = Fatalities, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) +
+  theme_classic() + 
+  ggtitle("Fatalities 1982- 1993") + 
+  ylab("Fatalities") + 
+  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
+  xlab("End of year") + 
+  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
+  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
+  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(1982,1993)) + 
+  scale_y_continuous(expand=c(0,0)) +
+  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
+  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
+
+ggsave("Fatalities.pdf")
+```
+
+
+```{r}
+Casualties <- ggplot() + geom_line(data = Ksi3, aes(y = Casualties, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) +
+  theme_classic() + 
+  ggtitle("Casualties 1982- 1993") + 
+  ylab("Casualties") + 
+  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
+  xlab("End of year") + 
+  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
+  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
+  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(1982,1993)) + 
+  scale_y_continuous(expand=c(0,0)) +
+  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
+  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
+
+ggsave("Casualties.pdf")
+```
+
 ggsave("KSIsperMiles.pdf")
 1983 front seatbelts
 1991 back seatbelts 

@@ -13,6 +13,22 @@ library(lubridate)
 ```
 
 ```{r}
+InternationalFatalities <- fread("CSV/international_roadfatal.csv")
+InternationalFatalities <- InternationalFatalities[order(`Rate of road deaths in 2023 per million population`, decreasing = TRUE),]
+```
+
+```{r}
+ggplot(InternationalFatalities, aes(y= `Rate of road deaths in 2023 per million population`, x= Country)) + 
+  geom_bar(stat = "identity")+ 
+  theme_classic() + 
+  theme( axis.text.x=element_text(angle = 45, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5)) + 
+  ylab("Rate of road deaths") + 
+  ggtitle("Rate of road deaths in 2023 per million population") + 
+  xlab("Country")
+```
+
+
+```{r}
 OECDStats <- fread("CSV/OECDInternationalFatalities.csv")
 OECDStats <- OECDStats[order(OBS_VALUE, decreasing = TRUE),][, Reference := paste0(REF_AREA, "_", `Reference area`)]
 ```
