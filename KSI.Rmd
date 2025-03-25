@@ -10,76 +10,82 @@ library(data.table)
 library(ggplot2)
 library(patchwork)
 library(lubridate)
+library(readr)
+library(readODS)
 ```
 
 ```{r}
-datatable <- fread("CSV/casdf.csv")
-TotalMilesDriven <- fread("CSV/MilesbyVehicleType.csv")
+source("~/Documents/GitHub/SustainableMotoringIndex/KSIs/LoadingSeverityData.R")
+source("~/Documents/GitHub/SustainableMotoringIndex/KSIs/LoadingMilesbyVehType.R")
 Population <- fread("CSV/Population.csv")
-TotalMilesDriven <- TotalMilesDriven[, c("Notes", "Cars_and_Taxis", "Light_commercial_veh", "Heavy_goods_veh",  "Total_other_veh", "Other_veh:Motorcycles", "Other_veh:Buses_and_coaches"):=NULL]
-setnames(datatable, "accident_year", "Year")
-TotalMilesDriven <- merge(TotalMilesDriven, Population, by = "Year", all= TRUE)
-datatable79 <- subset(datatable, datatable$Year <= 2004 )
-datatable04 <- subset(datatable, datatable$Year >= 2004)
-CasualtybyYear <- datatable79[,.N, keyby = c("Year", "casualty_severity")]
-CasualtybyYear <- merge(subset(CasualtybyYear, CasualtybyYear$casualty_severity == "Fatal"), subset(CasualtybyYear, CasualtybyYear$casualty_severity == "Serious"), by = "Year", all = TRUE)
-setnames(CasualtybyYear, c("N.x", "N.y"), c("Fatalities", "Casualties"))
-CasualtybyYear[, c("casualty_severity.x", "casualty_severity.y") := NULL][, Year:= seq(from = as.Date("1979-01-01"), to = as.Date("2004-01-01"), by = "year")]
-Serious04 <- subset(datatable04, datatable04$casualty_severity != "Fatal")
-Serious04 <- Serious04[!adjusted_slight == "1",][, sum(adjusted_serious), keyby = "Year"]
-Fatal04 <- subset(datatable04, datatable04$casualty_severity == "Fatal")
-Fatal04 <- Fatal04[, .N, keyby = c("Year")]
-setnames(Fatal04, "N", "Fatalities")
-setnames(Serious04, "V1", "Casualties")
-KSI2 <- merge(Serious04, Fatal04, by = "Year", all = TRUE)
-KSI2[, Year:= seq(from = as.Date("2004-01-01"), to = as.Date("2023-01-01"), by = "year")]
-Ksi3 <- merge(KSI2, CasualtybyYear, by = c("Year", "Casualties", "Fatalities"), all = TRUE)
-Ksi3 <- Ksi3[, KSI:= Casualties + Fatalities]
-Ksi3 <- merge(TotalMilesDriven, Ksi3, by = "Year", all= TRUE)
-Ksi3 <- Ksi3[, FatalityRate := Fatalities / All_motor_veh][, CasualtyRate := Casualties / All_motor_veh][, KSIRate := KSI / All_motor_veh][!is.na(Fatalities),][, Year:= year(Year)]
-rm(Serious04, Fatal04, KSI2, CasualtybyYear, datatable04, datatable79)
 ```
 
-For 2004 to date, you need to calculate adjusted KSI, in other words, the count of fatalities plus the sum total of the serious severity adjustment column.  This column has a range from 0 to 1, and is NA in all years prior to 2004.  So, from 2004 on, the KSI value should be to many decimal places.  You round the number at the very very end of the entire process.
+```{r}
+TotalMilesDriven <- TotalMilesDriven[, .(Year, `All Motor Vehicles`)][, Year:= seq.Date(from = as.Date("1949-01-01"), to = as.Date("2023-01-01"), by = "year")]
+Population <- Population[, Year:=as.Date(Year)]
+TotalMilesDriven <- merge(TotalMilesDriven, Population, by = "Year", all= TRUE)
+```
 
-We essentially need two lines on the graph: 1979-2003 STATS19 KSIs over traffic volumes, and 2004 to date adjusted KSIs over traffic volumes.
+```{r}
+CasualtybyYear <- cas.df[accident_year < 2004, .N, keyby=c("accident_year", "casualty_severity")]
+CasualtybyYear <- merge(CasualtybyYear[casualty_severity=="Fatal",], CasualtybyYear[casualty_severity=="Serious",], by = "accident_year", all = TRUE)
+CasualtybyYear <- CasualtybyYear[, "Casualties":=as.numeric(N.y)][, "Fatalities":=as.numeric(N.x)][, .(accident_year, Fatalities, Casualties)]
+tester <- cas.df[accident_year>= 2004 & !(adjusted_slight == 1) & !(casualty_severity == "Fatal"),sum(adjusted_serious), keyby = accident_year][, "Casualties":=V1][, V1:=NULL]
+tester2 <- cas.df[accident_year >= 2004 & casualty_severity == "Fatal", .N, keyby = accident_year][, "Fatalities":=as.numeric(N)][, N:=NULL]
+tester3 <- merge(tester, tester2 , by = "accident_year", all = TRUE)
+CasualtybyYear <- merge(CasualtybyYear, tester3, by =c("accident_year", "Fatalities", "Casualties"), all = TRUE)
+rm(tester, tester2, tester3)
+CasualtybyYear <- CasualtybyYear[,accident_year:=seq.Date(from = as.Date("1979-01-01"), to = as.Date("2023-01-01"), by = "year")][, "KSI":= Casualties + Fatalities]
+```
 
-def <- datatable04[!casualty_severity = "Slight",] removing values
+```{r}
+KSIandMileage <- merge(TotalMilesDriven, CasualtybyYear, by.x ="Year" , by.y = "accident_year", all = TRUE)
 
-+
-  theme(axis.text.x=element_text(angle=60, hjust=1))
+KSIandMileage <- KSIandMileage[, "KSIRate":= KSI/`All Motor Vehicles`][, "CasualtyRate":=Casualties/`All Motor Vehicles`][, "FatalityRate":=Fatalities/ `All Motor Vehicles`][,Year:= lubridate::year(Year)][!is.na(Fatalities),]
+```
+
 #Graphs 
 ```{r}
 ggplot() +
-  geom_line(data = Ksi3, aes(x = Year, y= Fatalities ,colour = "Fatality (killed)") ) +
-  geom_line(data = Ksi3, aes(x = Year, y = Casualties , colour = "Casualty (serious injury)")) +
-  theme_classic() + ylab("Totals") +
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + xlab("End of year") +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=60, hjust=1)) + geom_vline(xintercept=2004, color="black", linewidth =0.5, linetype = "dashed") +
-    annotate(geom="text", x= 2010 , y=75000, 
-             label="Adjusted severity ->") + scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0))
+  geom_line(data = KSIandMileage, aes(x = Year, y= Fatalities ,colour = "Fatality (killed)") ) +
+  geom_line(data = KSIandMileage, aes(x = Year, y = Casualties , colour = "Casualty (serious injury)")) +
+  theme_classic() +
+  labs(title = "Casualties and fatalities by year", x = "End of year", y = "Totals", caption = "In 2004 there was a change in methodology to improve the accuracy of the seriousness of injuries reported, adjusted severity rates are the result of this, shown by the data on the right of the dotted line.") +
+  scale_color_manual("Casuality severity levels", values = CasualtyColours) +
+  theme(plot.caption = element_text(hjust = 1, face = "italic"),plot.title = element_text(face = "bold", hjust = 0.5),legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=30, hjust=1)) + 
+    geom_vline(xintercept=2004, color="black", linewidth =0.5, linetype = "dashed") +
+    scale_x_continuous(breaks = pretty(KSIandMileage$Year, n = 10), expand=c(0,0))
 
 ```
-
-```{r}
-ggplot(data= Ksi3, aes(x= Year, y = KSI, colour = "Fatality or casualty (killed or seriously injured)")) + geom_line()+ theme_classic() + ggtitle("Annual KSI's") + ylab("Totals") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + xlab("End of year") +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=60, hjust=1)) + 
-  geom_vline(xintercept=2004, color="black", linewidth=0.5, linetype = "dashed")+
-    annotate(geom="text", x= 2010 , y=75000, label="Adjusted severity ->") +
-  scale_y_continuous(expand=c(0,0)) +
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0))
-```
+  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
+  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted")  +
+  geom_text(data = seatbelts, aes( x = x, y = y, label = label), check_overlap = TRUE, size = 3, size.unit = "mm") +
+  seatbelts <- data.frame(x = c(1983, 1991), y= c(200, 400), label = c("Front seatbelts", "Rear seatbelts"))
 ```{r}
 ggplot() + 
-  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)"))+
+  geom_line(data = KSIandMileage, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
+  geom_line(data = KSIandMileage, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
+  geom_line(data = KSIandMileage, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
   theme_classic() + 
-  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles") + ylab("Rate") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=60, hjust=1)) + 
-  xlab("End of year")+ geom_vline(xintercept=2004, color="black", linewidth=0.5, linetype = "dashed") +
-    annotate(geom="text", x= 2010 , y=400, 
-             label="Adjusted severity ->")+ scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0))
+  scale_color_manual(" ", values = CasualtyColours) + 
+  scale_linetype_manual(" ", values = CasualtyLines) +
+  geom_vline(xintercept=2004, color="black", linewidth=0.2, linetype = "dashed") +
+  scale_x_continuous(breaks = pretty(KSIandMileage$Year, n = 10), expand=c(0,0)) + 
+  scale_y_continuous(expand=c(0,0)) +
+  labs(x= "End of year", y = "Casualties/ fatalities per billion miles", title = "Fatalities and serious injuries per one billion motor vehicle miles travelled", caption = "In 2004 there was a change in methodology to improve the accuracy of the seriousness of injuries reported. \nAdjusted severity rates are the result of this, shown by the data on the right of the dotted line.") + 
+  theme(plot.caption = element_text(hjust = 1, face = "italic"),plot.title = element_text(face = "bold", hjust = 0.5),legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=30, hjust=1))
+```
+
+
+```{r}
+ggplot() + 
+  geom_line(data = KSIandMileage, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)"))+
+  theme_classic() + 
+  labs(title = "Fatalities and serious injuries per one billion motor vehicle miles", x = "End of year", y = "Rate", caption = "In 2004 there was a change in methodology to improve the accuracy of the seriousness of injuries reported, adjusted severity rates are the result of this, shown by the data on the right of the dotted line.") +
+  scale_color_manual(" ", values = CasualtyColours)  +
+  theme(plot.caption = element_text(hjust = 1, face = "italic"),plot.title = element_text(face = "bold", hjust = 0.5),legend.position = "bottom", legend.title.position = "top", legend.text.position = "bottom", legend.key = element_rect(fill = "white", colour = "black"), axis.text.x=element_text(angle=30, hjust=1)) + 
+    geom_vline(xintercept=2004, color="black", linewidth =0.5, linetype = "dashed") +
+    scale_x_continuous(breaks = pretty(KSIandMileage$Year, n = 10), expand=c(0,0))
 ```
 #Unadjusted KSI graph
 ```{r}
@@ -136,135 +142,6 @@ ggplot() +
 ggsave("UnadjustedKSIPlot2004.pdf")
 ggsave("UnadjustedKSIPlot.pdf")
 
-#Main KSI plot
-KSIsperMiles <- 
-```{r}
-annotations <- data.frame(xcord = c(2014, 1996), ycord =c(500, 500), label = c("Adjusted*", "Unadjusted*"))
-seatbelts <- data.frame(x = c(1983, 1991), y= c(200, 400), label = c("Front seatbelts", "Rear seatbelts"))
-
-ggplot() + 
-  geom_line(data = Ksi3, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = Ksi3, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
-  geom_vline(xintercept=2004, color="black", linewidth=0.2, linetype = "dashed") +
-  geom_text(data = annotations, aes(x = xcord, y = ycord, label=label, fontface = "italic")) + 
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  labs(caption = "*In 2004 there was a change in methodology to improve the accuracy of the seriousness \n of injuries reported, adjusted severity rates are the result of this.") + 
-  geom_text(data = seatbelts, aes( x = x, y = y, label = label), check_overlap = TRUE, size = 3, size.unit = "mm") +
-  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
-  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted")
-
-```
-
-
-```{r}
-ggplot() + 
-  geom_line(data = Ksi3, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = Ksi3, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
-  geom_vline(xintercept=2004, color="black", linewidth=0.2, linetype = "dashed") +
-  geom_text(data = annotations, aes(x = xcord, y = ycord, label=label, fontface = "italic")) + 
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(NA,1995)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  geom_text(data = seatbelts, aes( x = x, y = y, label = label), check_overlap = TRUE, size = 3, size.unit = "mm") +
-  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
-  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted")
-
-
-ggplot() + 
-  geom_line(data = Ksi3, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = Ksi3, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = Ksi3, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(NA,1986)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
-```
-
-
-```{r}
-Fatalities <- ggplot() + 
-  geom_line(data = Ksi3, aes(y = Fatalities, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) +
-  theme_classic() + 
-  ggtitle("Fatalities 1982- 1993") + 
-  ylab("Fatalities") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(1982,1993)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
-  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
-
-ggsave("Fatalities.pdf")
-```
-
-
-```{r}
-Casualties <- ggplot() + geom_line(data = Ksi3, aes(y = Casualties, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) +
-  theme_classic() + 
-  ggtitle("Casualties 1982- 1993") + 
-  ylab("Casualties") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0), limits = c(1982,1993)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  geom_vline(xintercept=1991, color="#9D76AC", linewidth=0.2, linetype = "dotted") +
-  geom_vline(xintercept=1983, color="#9D76AC", linewidth=0.2, linetype = "dotted")
-
-ggsave("Casualties.pdf")
-```
-
-ggsave("KSIsperMiles.pdf")
-1983 front seatbelts
-1991 back seatbelts 
-plot.tag.position = "bottomleft",
-
-ksi32 <- Ksi3[Year >= 2004,]
-ksi32 <- ksi32[2:21]
-
-KSIsperMiles2004 <- 
-```{r}
-ksi32 <- Ksi3[Year >= 2004,]
-ksi32 <- ksi32[2:21]
-ggplot() + 
-  geom_line(data = ksi32, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = ksi32, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = ksi32, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("Fatalities and serious injuries per one billion motor vehicle miles travelled: 2004-2023") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic"))  + 
-  scale_x_continuous(expand=c(0,0)) + 
-  scale_y_continuous(expand=c(0,0)) 
-```
 #KSIs by population
 
 KSIbyGBPopulation <- 
