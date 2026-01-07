@@ -1,4 +1,4 @@
-SetColours <- function() {
+.SetColours <- function() {
 .RACFBlue <<- "#0C2340"
 .RACFSilver <<- "#8C8F92"
 .RACFWhite <<- "#FFFFFF"
@@ -74,12 +74,12 @@ SetColours <- function() {
 .RACFColour12.2 <<- "#A4ABB5"
 .RACFColour12.3 <<- "#BEC3C8"
 .RACFColour12.4 <<- "#DADCDF"
-FuelShapes <<- c("Diesel" = 24, 
+.FuelShapes <<- c("Diesel" = 24, 
                  "Petrol" = 25, 
                  "Battery electric" = 19, 
                  "PHEV" = 18, 
                  "All fuels" = 15)
-FuelLines <<- c("Adjusted diesel" = 4 , 
+.FuelLines <<- c("Adjusted diesel" = 4 , 
                 "Adjusted petrol" = 4 , 
                 "Diesel" = 1, 
                 "Petrol" = 1, 
@@ -90,7 +90,7 @@ FuelLines <<- c("Adjusted diesel" = 4 ,
                 "Biodiesel" = 3, 
                 "Tax-free diesel" = 4 , 
                 "Tax-free petrol" = 3 )
-FuelColours <<- c("Diesel" = .DieselGrey, 
+.FuelColours <<- c("Diesel" = .DieselGrey, 
                   "Adjusted diesel" = .DieselGrey, 
                   "Petrol" = .PetrolGreen, 
                   "Adjusted petrol" = .PetrolGreen, 
@@ -102,7 +102,7 @@ FuelColours <<- c("Diesel" = .DieselGrey,
                   "Biodiesel" = .RACFColour11.1, 
                   "Tax-free diesel" = .DieselGrey , 
                   "Tax-free petrol" = .PetrolGreen)
-VehicleColours <<- c("Cars" = .RACFBlue, 
+.VehicleColours <<- c("Cars" = .RACFBlue, 
                      "TFL tube" = .RACFColour2 , 
                      "Cycling" = .RACFColour3.2 , 
                      "TFL bus"= .RACFColour8, 
@@ -116,9 +116,9 @@ VehicleColours <<- c("Cars" = .RACFBlue,
                      "Motorcycles" = .RACFColour7,
                      "Total other vehicles" = .RACFColour4,
                      "Buses and coaches" = .RACFColour4.1)
-CasualtyColours <<- c("Fatality (killed)" = .RACFColour9, "Casualty (serious injury)" = .RACFColour7, "Fatality or casualty (killed or seriously injured)" = .RACFColour5.2)
-CasualtyLines <<- c("Fatality (killed)" = 2, "Casualty (serious injury)" = 4, "Fatality or casualty (killed or seriously injured)" = 1)
-PassFailColours <<- c("Passed" = .RACFColour3.1, "Failed"= .RACFColour10)
-RoadClassColours <<- c("Motorways" = .RACFColour9, "Rural A roads"= .GFIgreen,  "Urban A roads"= .RACFColour7, "Rural minor roads"= .RACFColour6, "Urban minor roads"=.RACFColour5.4 ,  "All roads"=.RACFColour5.3 )
+.CasualtyColours <<- c("Fatality (killed)" = .RACFColour9, "Casualty (serious injury)" = .RACFColour7, "Fatality or casualty (killed or seriously injured)" = .RACFColour5.2, "KSI" = .RACFColour5.2, "Fatal" = .RACFColour9, "Serious" = .RACFColour7)
+.CasualtyLines <<- c("Fatality (killed)" = 2, "Casualty (serious injury)" = 4, "Fatality or casualty (killed or seriously injured)" = 1, "Fatal" = 2, "Serious" = 4, "KSI" = 1)
+.PassFailColours <<- c("Passed" = .RACFColour3.1, "Failed"= .RACFColour10)
+.RoadClassColours <<- c("Motorways" = .RACFColour9, "Rural A roads"= .GFIgreen,  "Urban A roads"= .RACFColour7, "Rural minor roads"= .RACFColour6, "Urban minor roads"=.RACFColour5.4 ,  "All roads"=.RACFColour5.3 )
 }
-SetColours()
+.SetColours()

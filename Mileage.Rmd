@@ -7,34 +7,50 @@ output: pdf_document
 
 #Set up
 ```{r}
-library(data.table)
-library(ggplot2)
-library(patchwork)
-library(lubridate)
+if(!require("pacman")) install.packages("pacman")
+pacman::p_load(data.table, lubridate, ggplot2, patchwork, readxl, readr, RACFfunctions, scales, utils)
+options(scipen = 100)
 ```
 
 ```{r}
-MilesByVehType <- fread("CSV/MilesbyVehicleType.csv")
-MilesbyRoadClass <- fread("CSV/MilesbyRoadClass.csv")
+MilesByVehType <- as.data.table(read_excel("~/Documents/GitHub/SustainableMotoringIndex/KSIs/tra0101-miles-by-vehicle-type.xlsx", sheet = "TRA0101", skip = 4))
+MilesbyRoadClass <- as.data.table(read_excel("CSV/tra0102-miles-by-road-class.xlsx", sheet = "TRA0102", skip = 4))
+
+setnames(MilesByVehType, c("Year", "Notes", "Units", "Cars and Taxis", "Light Commercial Vehicles [note 1]", "Heavy Goods Vehicles [note 2]", "Other Vehicles: Motorcycles", "Other Vehicles: Buses and Coaches", "Total Other Vehicles [note 3]", "All Motor Vehicles"), 
+         c("Year", "Notes", "Units", "Cars and taxis", "Light commercial vehicles", "Heavy goods vehicles", "Motorcycles", "Buses and coaches", "Total other vehicles", "All motor vehicles"))
+
+setnames(MilesbyRoadClass, c("Year", "Notes", "Units", "Major Roads: Motorway [note 1]", "Major Roads: Rural 'A' Roads [note 2]", "Major Roads: Urban 'A' Roads [note 2]", "Major Roads: All 'A' Roads", "All Major Roads", "Minor Roads: Rural [note 2]", "Minor Roads: Urban [note 2]", "All Minor Roads", "All Roads"), 
+         c("Year", "Notes", "Units", "Motorways", "Rural A roads", "Urban A roads", "All A roads", "All major roads", "Rural minor roads", "Urban minor roads", "All minor roads", "All roads"))
+
+
+MilesByVehType <- melt(MilesByVehType[,.(Year, `Cars and taxis`, `Light commercial vehicles`, `Heavy goods vehicles`, Motorcycles, `Buses and coaches`, `Total other vehicles`, `All motor vehicles`)], id.vars = c("Year"))
+setnames(MilesByVehType, c("variable", "value"), c("Vehicle type", "Miles driven"))
+MilesByVehType<-MilesByVehType[, `Vehicle type`:=as.character(`Vehicle type`)]
+
+
+MilesbyRoadClass <- melt(MilesbyRoadClass[,.(Year, Motorways, `Rural A roads`, `Urban A roads`, `All A roads`, `All major roads`, `Rural minor roads`, `Urban minor roads`, `All minor roads`, `All roads`)], id.vars = "Year")
+MilesbyRoadClass <- MilesbyRoadClass[,variable:=as.character(variable)]
+setnames(MilesbyRoadClass, c("variable", "value"), c("Road type", "Miles driven"))
 ```
 
 ```{r}
-ggplot(data = MilesByVehType, aes(x= Year, y= Cars_and_Taxis, colour = "Cars and taxis")) + geom_line() + 
-  geom_line(data = MilesByVehType, aes(x= Year, y= Light_commercial_veh, colour = "Light commercial vehicles")) + 
-  geom_line(data = MilesByVehType, aes(x= Year, y= Heavy_goods_veh, colour = "Heavy goods vehicles"))+ 
-  geom_line(data = MilesByVehType, aes(x= Year, y= `Other_veh:Motorcycles`, colour = "Motorcycles"))+ 
-  geom_line(data = MilesByVehType, aes(x= Year, y=  `Other_veh:Buses_and_coaches`, colour = "Buses and coaches"))+ 
-  geom_line(data = MilesByVehType, aes(x= Year, y=  Total_other_veh, colour = "Total other vehicles"))+ 
-  geom_line(data = MilesByVehType, aes(x= Year, y=  All_motor_veh, colour = "All motor vehicles")) + 
-  scale_color_manual("Vehicle types", values = VehicleColours) + theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by vehicle type")
+ggplot(MilesByVehType, aes(x = Year, y = `Miles driven`, colour = `Vehicle type`)) + 
+  geom_line() + 
+  theme_classic() + 
+  labs(title = "Total billion miles travelled by vehicle type", y = "Miles travelled (billions)", x = "Year") +
+  scale_colour_manual("", values = .VehicleColours) + 
+  scale_x_continuous(n.breaks = 20, expand = c(0,0)) + 
+  scale_y_continuous(n.breaks = 20, expand = c(0,0)) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.subtitle = element_text(hjust = 0, face = "italic"), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom")
 ```
+
 ```{r}
-ggplot(data = MilesbyRoadClass, aes(x= Year, y = `Major_roads:motorways`, colour = "Motorways")) + geom_line() +
-  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Rural_A_roads`, colour = "Rural A roads")) + 
-  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `major_roads:Urban_A_roads`, colour = "Urban A roads")) +
-  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Rural`, colour = "Rural minor roads")) + 
-  geom_line(data = MilesbyRoadClass, aes(x= Year, y = `minor_roads:Urban`, colour = "Urban minor roads")) + 
-  theme_classic() + xlab("Year") + ylab("Miles travelled (billions)") + ggtitle("Total billion miles travelled by road type")+ 
-  scale_color_manual("Road class", values = RoadClassColours) + 
-  scale_x_continuous(breaks = pretty(MilesbyRoadClass$Year, n = 10), expand=c(0,0))
+ggplot(MilesbyRoadClass[`Road type` %in% c("Motorways", "Rural A roads", "Urban A roads", "Rural minor roads", "Urban minor roads")], aes(x = Year, y = `Miles driven`, colour = `Road type`)) + 
+  geom_line() + 
+  theme_classic() + 
+  labs(title = "Total billion miles travelled by road type", y = "Miles travelled (billions)", x = "Year") +
+  scale_colour_manual("", values = .RoadClassColours) + 
+  scale_x_continuous(n.breaks = 20, expand = c(0,0)) + 
+  scale_y_continuous(n.breaks = 20, expand = c(0,0)) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.subtitle = element_text(hjust = 0, face = "italic"), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom")
 ```
