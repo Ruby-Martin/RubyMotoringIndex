@@ -12,8 +12,15 @@ options(scipen = 100)
 ```
 
 ```{r}
-source("~/Documents/GitHub/SustainableMotoringIndex/KSIs/LoadingSeverityData.R")
+source("~/Documents/GitHub/RubyMotoringIndex/ForRuby.R")
+```
 
+```{r}
+source("~/Documents/GitHub/SustainableMotoringIndex/KSIs/ColourFunction.R")
+```
+
+
+```{r}
 MilesByVehicleType <- as.data.table(read_excel("~/Documents/GitHub/SustainableMotoringIndex/KSIs/tra0101-miles-by-vehicle-type.xlsx", sheet = "TRA0101", skip = 4))
 
 download("https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatestimeseriesdataset/current/upload-pop.csv", "~/Documents/GitHub/RubyMotoringIndex/CSV/PopulationEst.csv")
@@ -23,7 +30,7 @@ Population <- Population[8:62,]
 setnames(Population, c("Title", "Scotland population mid-year estimate", "Great Britain population mid-year estimate", "England population mid-year estimate", "England and Wales population mid-year estimate", "United Kingdom population mid-year estimate", "Northern Ireland population mid-year estimate", "Wales population mid-year estimate"), c("Year", "Scotland", "Great Britain", "England", "England and Wales", "United Kingdom", "Northern Ireland", "Wales"))
 Population <- Population[, lapply(.SD, as.numeric), .SDcols = c("Scotland", "Great Britain", "England", "England and Wales", "United Kingdom", "Northern Ireland", "Wales"), by = c("Year")]
 
-Population <- Population[, Year:=as.Date.character(Year, tryFormats = "%Y")]
+Population <- Population[, Year:=as.numeric(Year)]
 
 TotalMilesDriven <- MilesByVehicleType[,.(Year, `All Motor Vehicles`)]
 TotalMilesDriven <- TotalMilesDriven[, Year:=(as.Date(paste0(Year, "-01-01"), tryFormats = "%Y"))]
@@ -103,82 +110,120 @@ ggplot(KSIandMileage[casualty_severity=="KSI",], aes(x = Year, y = Rate, colour 
 ```
 #Unadjusted KSI graph
 ```{r}
-UnadjustedKSI <- datatable[,.N, keyby = c("Year", "casualty_severity")]
-UnadjustedKSI <- merge(subset(UnadjustedKSI, UnadjustedKSI$casualty_severity == "Fatal"), subset(UnadjustedKSI, UnadjustedKSI$casualty_severity == "Serious"), by = "Year", all = TRUE)
-setnames(UnadjustedKSI, c("N.x", "N.y"), c("Fatalities", "Casualties"))
-UnadjustedKSI[, c("casualty_severity.x", "casualty_severity.y") := NULL]
-UnadjustedKSI <- UnadjustedKSI[, Year:= seq(from = as.Date("1979-01-01"), to = as.Date("2023-01-01"), by = "year")]
+UnadjustedKSI <- cas.df[!casualty_severity=="Slight",.N, keyby = c("collision_year", "casualty_severity")]
+
+temp <- UnadjustedKSI[, lapply(.SD, sum), .SDcols = "N", by = "collision_year"]
+temp <- temp[, "casualty_severity":="KSI"]
+UnadjustedKSI <- merge(UnadjustedKSI, temp, by = c("collision_year", "N", "casualty_severity"), all = TRUE)
+rm(temp)
+
+UnadjustedKSI <- merge(MilesByVehicleType[,.(Year, `All Motor Vehicles`)], UnadjustedKSI, by.x = "Year",  by.y = "collision_year", all = TRUE)
+UnadjustedKSI <- UnadjustedKSI[!is.na(casualty_severity)]
+UnadjustedKSI <- UnadjustedKSI[, "Rate":=N/`All Motor Vehicles`]
+
 ```
+
 
 ```{r}
-UnadjustedKSI <- UnadjustedKSI[, KSI:= Casualties + Fatalities]
-UnadjustedKSI <- merge(TotalMilesDriven, UnadjustedKSI, by = "Year", all= TRUE)
-UnadjustedKSI <- UnadjustedKSI[, FatalityRate := Fatalities / All_motor_veh][, CasualtyRate := Casualties / All_motor_veh][, KSIRate := KSI / All_motor_veh][!is.na(Fatalities),][, Year:= year(Year)]
+ggplot(UnadjustedKSI, aes(x = Year, y = Rate, colour = casualty_severity, linetype = casualty_severity)) + 
+  geom_line() +
+  theme_classic() + 
+  labs(title = "UNADJUSTED Fatalities and serious injuries per one billion motor vehicle miles travelled", x = "Year", y = "Casualties/ fatalities per billion miles") +
+  scale_color_manual("", values = .CasualtyColours) + 
+  scale_linetype_manual("", values = .CasualtyLines) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom") + 
+  scale_x_continuous(n.breaks = 10, expand=c(0,0)) + 
+  scale_y_continuous(expand=c(0,0), labels = scales::comma, n.breaks = 10)
 ```
 
-UnadjustedKSIPlot <- 
-UnadjustedKSIPlot2004 <- 
+
 ```{r}
-UnadjustedKSI2 <- UnadjustedKSI[ Year >= 2004,]
-
-ggplot() + 
-  geom_line(data = UnadjustedKSI, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = UnadjustedKSI, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = UnadjustedKSI, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
+ggplot(UnadjustedKSI[Year>=2004], aes(x = Year, y = Rate, colour = casualty_severity, linetype = casualty_severity)) + 
+  geom_line() +
   theme_classic() + 
-  ggtitle("UNADJUSTED Fatalities and serious injuries 
-          per one billion motor vehicle miles travelled") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Unadjusted casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Unadjusted casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) + 
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0)) + 
-  scale_y_continuous(expand=c(0,0)) 
-
-ggplot() + 
-  geom_line(data = UnadjustedKSI2, aes(y = FatalityRate, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data = UnadjustedKSI2, aes(y = CasualtyRate, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = UnadjustedKSI2, aes(y = KSIRate, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("UNADJUSTED Fatalities and serious injuries 
-          per one billion motor vehicle miles travelled:2004 onwards") + 
-  ylab("Casualties/ fatalities per billion miles") + 
-  scale_color_manual("Unadjusted casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Unadjusted casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) + 
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0)) + 
-  scale_y_continuous(expand=c(0,0)) 
-
-
+  labs(title = "UNADJUSTED Fatalities and serious injuries per one billion motor vehicle miles travelled", x = "Year", y = "Casualties/ fatalities per billion miles", subtitle = "2004 onwards") +
+  scale_color_manual("", values = .CasualtyColours) + 
+  scale_linetype_manual("", values = .CasualtyLines) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom") + 
+  scale_x_continuous(n.breaks = 10, expand=c(0,0)) + 
+  scale_y_continuous(expand=c(0,0), labels = scales::comma, n.breaks = 10)
 ```
-ggsave("UnadjustedKSIPlot2004.pdf")
-ggsave("UnadjustedKSIPlot.pdf")
+
 
 #KSIs by population
-
-KSIbyGBPopulation <- 
 ```{r}
-Ksi3 <- Ksi3[, FatalitybyPop:= Fatalities / (Population / 100000)]
-Ksi3 <- Ksi3[, Casualtybypop:= Casualties / (Population / 100000)]
-Ksi3 <- Ksi3[, KSIbypop := KSI / (Population / 100000)]
+PopulationKSIs <- merge(Population[,.(Year, `Great Britain`)], CasualtybyYear, by.x = "Year", by.y = "collision_year", all = TRUE)
+PopulationKSIs <- PopulationKSIs[!is.na(casualty_severity)]
+PopulationKSIs <- PopulationKSIs[, "Per capita":= N / (`Great Britain` / 100000)]
 
-ggplot() + 
-  geom_line(data = Ksi3, aes(y = FatalitybyPop, x= Year, colour = "Fatality (killed)", linetype = "Fatality (killed)")) + 
-  geom_line(data =Ksi3 , aes(y = Casualtybypop, x= Year, colour = "Casualty (serious injury)", linetype = "Casualty (serious injury)")) + 
-  geom_line(data = Ksi3, aes(y = KSIbypop, x= Year, colour = "Fatality or casualty (killed or seriously injured)", linetype = "Fatality or casualty (killed or seriously injured)")) +
-  theme_classic() + 
-  ggtitle("Fatalities and serious injuries per 100k in GB Population") + 
-  ylab("Casualties/ fatalities per population") + 
-  scale_color_manual("Casuality severity levels", values = CasualtyColours) + 
-  xlab("End of year") + 
-  scale_linetype_manual("Casuality severity levels", values = CasualtyLines) +
-  theme(legend.position = "bottom", legend.title.position = "top", legend.text.position = "top", legend.key = element_rect(fill = "white", colour = "black", ), axis.text.x=element_text(angle=60, hjust=1), plot.title = element_text(face = "bold", hjust = 0.5), plot.caption = element_text(hjust = 0, face = "italic")) +
+ggplot(PopulationKSIs, aes(x = Year, y = `Per capita`, colour = casualty_severity, linetype = casualty_severity)) + 
+  geom_line() + 
+  theme_classic() + labs(title = "Fatalities and serious injuries per 100k in GB Population", x = "Year", y = "Casualties/ fatalities per population", caption = "*In 2004 there was a change in methodology to improve the accuracy of the seriousness \n of injuries reported, adjusted severity rates are the result of this.") +
+  scale_color_manual("", values = .CasualtyColours) + 
+  scale_linetype_manual("", values = .CasualtyLines) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom") + 
   geom_vline(xintercept=2004, color="black", linewidth=0.2, linetype = "dashed")  + 
-  scale_x_continuous(breaks = pretty(Ksi3$Year, n = 10), expand=c(0,0)) + 
-  scale_y_continuous(expand=c(0,0)) +
-  labs(caption = "*In 2004 there was a change in methodology to improve the accuracy of the seriousness \n of injuries reported, adjusted severity rates are the result of this.")
-
+  scale_x_continuous(n.breaks = 10, expand=c(0,0)) + 
+  scale_y_continuous(expand=c(0,0), labels = scales::comma, n.breaks = 10)
 ```
-ggsave("KSIbyGBPopulation.pdf")
+# International comparison
+
+```{r}
+International <- as.data.table(read_excel("CSV/ras0404.xlsx", sheet = "Historic", skip = 4))
+International <- International[, "Rate of road deaths in 2024 per million population":=as.numeric(`Rate of road deaths in 2024 per million population [note 3]`)][, "Country":= `Country [note 1]`]
+
+International <- International[,.(Country,`Rate of road deaths in 2024 per million population`)]
+```
+
+```{r}
+ggplot(International, aes(y= `Rate of road deaths in 2024 per million population`, x= Country)) + 
+  geom_bar(stat = "identity", fill = .RACFColour1.1)+ 
+  theme_classic() + 
+  labs(title = "Rate of road deaths in 2024 per million population", x = "Country", y= "Rate of road deaths") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom") + 
+  scale_y_continuous(expand = c(0,0), labels = scales::comma, n.breaks = 10)
+```
+
+# Mileage
+```{r}
+MilesByVehType <- as.data.table(read_excel("~/Documents/GitHub/SustainableMotoringIndex/KSIs/tra0101-miles-by-vehicle-type.xlsx", sheet = "TRA0101", skip = 4))
+MilesbyRoadClass <- as.data.table(read_excel("CSV/tra0102-miles-by-road-class.xlsx", sheet = "TRA0102", skip = 4))
+
+setnames(MilesByVehType, c("Year", "Notes", "Units", "Cars and Taxis", "Light Commercial Vehicles [note 1]", "Heavy Goods Vehicles [note 2]", "Other Vehicles: Motorcycles", "Other Vehicles: Buses and Coaches", "Total Other Vehicles [note 3]", "All Motor Vehicles"), 
+         c("Year", "Notes", "Units", "Cars and taxis", "Light commercial vehicles", "Heavy goods vehicles", "Motorcycles", "Buses and coaches", "Total other vehicles", "All motor vehicles"))
+
+setnames(MilesbyRoadClass, c("Year", "Notes", "Units", "Major Roads: Motorway [note 1]", "Major Roads: Rural 'A' Roads [note 2]", "Major Roads: Urban 'A' Roads [note 2]", "Major Roads: All 'A' Roads", "All Major Roads", "Minor Roads: Rural [note 2]", "Minor Roads: Urban [note 2]", "All Minor Roads", "All Roads"), 
+         c("Year", "Notes", "Units", "Motorways", "Rural A roads", "Urban A roads", "All A roads", "All major roads", "Rural minor roads", "Urban minor roads", "All minor roads", "All roads"))
+
+
+MilesByVehType <- melt(MilesByVehType[,.(Year, `Cars and taxis`, `Light commercial vehicles`, `Heavy goods vehicles`, Motorcycles, `Buses and coaches`, `Total other vehicles`, `All motor vehicles`)], id.vars = c("Year"))
+setnames(MilesByVehType, c("variable", "value"), c("Vehicle type", "Miles driven"))
+MilesByVehType<-MilesByVehType[, `Vehicle type`:=as.character(`Vehicle type`)]
+
+
+MilesbyRoadClass <- melt(MilesbyRoadClass[,.(Year, Motorways, `Rural A roads`, `Urban A roads`, `All A roads`, `All major roads`, `Rural minor roads`, `Urban minor roads`, `All minor roads`, `All roads`)], id.vars = "Year")
+MilesbyRoadClass <- MilesbyRoadClass[,variable:=as.character(variable)]
+setnames(MilesbyRoadClass, c("variable", "value"), c("Road type", "Miles driven"))
+```
+
+```{r}
+ggplot(MilesByVehType, aes(x = Year, y = `Miles driven`, colour = `Vehicle type`)) + 
+  geom_line() + 
+  theme_classic() + 
+  labs(title = "Total billion miles travelled by vehicle type", y = "Miles travelled (billions)", x = "Year") +
+  scale_colour_manual("", values = .VehicleColours) + 
+  scale_x_continuous(n.breaks = 20, expand = c(0,0)) + 
+  scale_y_continuous(n.breaks = 20, expand = c(0,0)) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.subtitle = element_text(hjust = 0, face = "italic"), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom")
+```
+
+```{r}
+ggplot(MilesbyRoadClass[`Road type` %in% c("Motorways", "Rural A roads", "Urban A roads", "Rural minor roads", "Urban minor roads")], aes(x = Year, y = `Miles driven`, colour = `Road type`)) + 
+  geom_line() + 
+  theme_classic() + 
+  labs(title = "Total billion miles travelled by road type", y = "Miles travelled (billions)", x = "Year") +
+  scale_colour_manual("", values = .RoadClassColours) + 
+  scale_x_continuous(n.breaks = 20, expand = c(0,0)) + 
+  scale_y_continuous(n.breaks = 20, expand = c(0,0)) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5), plot.subtitle = element_text(hjust = 0, face = "italic"), axis.text.x=element_text(angle = 45, hjust=1), plot.caption = element_text(face = "italic"), legend.position = "bottom")
+```
